@@ -1,87 +1,98 @@
 import express from "express";
 
 const app = express();
+const PORT = 3000;
 
 app.use(express.json());
 
-const PORT = 3000;
-
-const produtos = [
-  { id: 1, nome: "Teclado", categoria: "periféricos" },
-  { id: 2, nome: "Controle", categoria: "periféricos" },
-  { id: 3, nome: "Mouse", categoria: "periféricos" },
-  { id: 4, nome: "Processador AMD Ryzen 7 7500", categoria: "eletrônicos" },
+// 2) Crie uma rota GET /tarefas que retorne um array fixo (em memória) de pelo menos 3 tarefas, cada uma com id, titulo e concluida.
+let tarefas = [
+  { id: 1, titulo: "Estudar Express.js", concluida: false },
+  { id: 2, titulo: "Criar middlewares na API", concluida: true },
+  { id: 3, titulo: "Testar rotas no Postman", concluida: false },
 ];
 
+function autenticar(req, res, next) {
+  console.log("[Autenticação] Verificando acesso...");
+  if (req.headers["x-auth"] === "bloqueado") {
+    return res.status(401).json({ erro: "Acesso não autorizado!" });
+  }
+  next();
+}
+
+function validarCorpo(req, res, next) {
+  console.log("[Validação] Checando dados recebidos...");
+  const { titulo } = req.body;
+
+  if (!titulo || typeof titulo !== "string" || titulo.trim() === "") {
+    return res.status(400).json({
+      erro: 'O campo "titulo" é obrigatório e deve ser uma string válida.',
+    });
+  }
+
+  next();
+}
+
+function registrarLog(req, res, next) {
+  const dataHora = new Date().toISOString();
+  console.log(
+    `[Log] [${dataHora}] Ação: Tentativa de criação da tarefa "${req.body.titulo}"`
+  );
+  next();
+}
+
+// 1) Crie um projeto Express do zero e um servidor que responda "API de Tarefas no ar" na rota GET /.
 app.get("/", (req, res) => {
-  res.send("Olá Express!");
+  res.send("API de Tarefas no ar");
 });
 
-app.get("/produtos", (req, res) => {
-  res.json(produtos);
+// 2) Crie uma rota GET /tarefas que retorne um array fixo (em memória) de pelo menos 3 tarefas, cada uma com id, titulo e concluida.
+// 4) Crie uma rota GET /tarefas que aceite uma query string ?concluida=true e filtre a lista de acordo.
+app.get("/tarefas", (req, res) => {
+  const { concluida } = req.query;
+
+  if (concluida !== undefined) {
+    const statusBooleano = concluida === "true";
+    const tarefasFiltradas = tarefas.filter(
+      (t) => t.concluida === statusBooleano
+    );
+    return res.json(tarefasFiltradas);
+  }
+
+  res.json(tarefas);
 });
 
-app.post("/produto", (req, res) => {
-  const nome = req.body.nome;
-  const categoria = req.body.categoria;
+// 3) Crie uma rota GET /tarefas/:id que retorne apenas a tarefa cujo id corresponda ao parâmetro. Se não encontrar, responda com status 404 e uma mensagem de erro em JSON.
+app.get("/tarefas/:id", (req, res) => {
+  const id = parseInt(req.params.id);
+  const tarefa = tarefas.find((t) => t.id === id);
 
-  if (!nome || typeof nome !== "string") {
-    return res
-      .status(400)
-      .json({ erro: 'O campo "nome" é obrigatório e deve ser uma string' });
+  if (!tarefa) {
+    return res.status(404).json({ erro: "Tarefa não encontrada!" });
   }
 
-  if (categoria === undefined || typeof categoria !== "string") {
-    return res
-      .status(400)
-      .json({
-        erro: 'O campo "categoria" é obrigatório e deve ser uma string',
-      });
-  }
-
-  const novoProduto = {
-    id: produtos.length + 1,
-    nome,
-    categoria,
-  };
-
-  produtos.push(novoProduto);
-
-  res.status(201).json(novoProduto);
+  res.json(tarefa);
 });
 
-// Req Params, pega um parâmetro na rota e identifica um recurso específico;
-app.get("/produtos/:id", (req, res) => {
-  // req.params sempre retorna strings, por isso se usa parseInt
-  const id = req.params.id;
-  const produto = produtos.find((p) => p.id === parseInt(id));
-  if (!produto) {
-    return res.status(404).json({ error: "Produto não encontrado!" });
+// 5) Configure express.json() e crie uma rota POST /tarefas que receba titulo no corpo da requisição e adicione uma nova tarefa ao array em memória, retornando status 201.
+// 1) Combine, em uma única rota POST /tarefas, a execução encadeada de três middlewares distintos já construídos ao longo dos exemplos anteriores, na seguinte ordem: autenticação → validação do corpo → registro de log da ação. Utilize a sintaxe que permite passar um array de middlewares para app.post() (ex.: app.post('/tarefas', [middleware1, middleware2], rotaFinal)), em vez de aplicá-los apenas com app.use() global.
+app.post(
+  "/tarefas",
+  [autenticar, validarCorpo, registrarLog],
+  (req, res) => {
+    const { titulo } = req.body;
+
+    const novaTarefa = {
+      id: tarefas.length > 0 ? tarefas[tarefas.length - 1].id + 1 : 1,
+      titulo,
+      concluida: false,
+    };
+
+    tarefas.push(novaTarefa);
+    res.status(201).json(novaTarefa);
   }
-  res.status(200).json(produto);
-});
-
-app.get("/produtos/busca", (req, res) => {
-  const categoria = req.query.categoria;
-  const ordenar = req.query.ordenar;
-
-  let resultado = produtos;
-
-  if (categoria) {
-    resultado = resultado.filter((produto) => {
-      produto.categoria === categoria;
-    });
-  }
-
-  if (ordenar) {
-    resultado = [...resultado].sort((a, b) => {
-      a.preco - b.preco;
-    });
-  }
-
-  res.json(resultado);
-});
+);
 
 app.listen(PORT, () => {
-  console.log(`Servidor funcionando http://localhost:${PORT}`);
+  console.log(`Servidor rodando em http://localhost:${PORT}`);
 });

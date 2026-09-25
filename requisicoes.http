@@ -1,0 +1,22 @@
+### 1. Rota Principal (GET /)
+GET http://localhost:3000/
+
+### 2. Listar todas as tarefas (GET /tarefas)
+GET http://localhost:3000/tarefas
+
+### 3. Filtrar tarefas concluídas (GET /tarefas?concluida=true)
+GET http://localhost:3000/tarefas?concluida=true
+
+### 4. Buscar tarefa por ID existente (GET /tarefas/1)
+GET http://localhost:3000/tarefas/1
+
+### 5. Buscar tarefa por ID inexistente (GET /tarefas/999)
+GET http://localhost:3000/tarefas/999
+
+### 6. Criar nova tarefa com Middlewares (POST /tarefas)
+POST http://localhost:3000/tarefas
+Content-Type: application/json
+
+{
+  "titulo": "Finalizar projeto de Express no VS Code"
+}
